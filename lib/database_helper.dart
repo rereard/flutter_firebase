@@ -39,7 +39,7 @@ class DatabaseHelper {
         CREATE TABLE 
         IF NOT EXISTS todos 
         (
-          id INTEGER PRIMARY KEY,
+          id INTEGER AUTOINCREMENT PRIMARY KEY,
           title TEXT NOT NULL,
           description TEXT,
           completed INTEGER NOT NULL
@@ -53,17 +53,10 @@ class DatabaseHelper {
     return todos.map((todo) => Todo.fromMap(todo)).toList();
   }
 
-  Future<Todo> getTodoById(int id) async {
-    var dbClient = await db;
-    var todo = await dbClient!.query('todos', where: 'id = ?', whereArgs: [id]);
-    return todo.map((todo) => Todo.fromMap(todo)).single;
-  }
-
   Future<List<Todo>> getTodoByTitle(String title) async {
     var dbClient = await db;
     var todo = await dbClient!
         .rawQuery("SELECT * FROM todos WHERE title LIKE '%$title%'");
-    // .query('todos', where: 'title like ?', whereArgs: [title]);
     return todo.map((todo) => Todo.fromMap(todo)).toList();
   }
 

@@ -32,11 +32,13 @@ class _TodoAppState extends State<TodoApp> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
+  final TextEditingController _titleEditController = TextEditingController();
+  final TextEditingController _descEditController = TextEditingController();
   final dbHelper = DatabaseHelper();
   List<Todo> _todos = [];
   List<Todo> _searchtodos = [];
-  int _count = 0;
   String keyword = '';
+  bool validate = false;
 
   @override
   void initState() {
@@ -51,6 +53,8 @@ class _TodoAppState extends State<TodoApp> {
       _searchtodos = todos;
       keyword = '';
     });
+    _titleController.clear();
+    _descController.clear();
     _searchController.clear();
   }
 
@@ -69,8 +73,7 @@ class _TodoAppState extends State<TodoApp> {
   }
 
   void addItem(String title, String desc) async {
-    final todo =
-        Todo(id: _count, title: title, description: desc, completed: false);
+    final todo = Todo(title: title, description: desc, completed: false);
     await dbHelper.insertTodo(todo);
     refreshItemList();
   }
@@ -126,7 +129,7 @@ class _TodoAppState extends State<TodoApp> {
                 : null,
           ),
           Expanded(
-            child: _todos.isNotEmpty || _searchController.text.trim().isNotEmpty
+            child: _todos.isNotEmpty
                 ? Card(
                     child: ListView.builder(
                       itemCount: _searchtodos.length,
@@ -139,7 +142,7 @@ class _TodoAppState extends State<TodoApp> {
                           leading: IconButton(
                             icon: const Icon(Icons.delete),
                             onPressed: () {
-                              deleteItem(todo.id);
+                              deleteItem(todo.id!);
                             },
                           ),
                           title: Text(
@@ -164,6 +167,27 @@ class _TodoAppState extends State<TodoApp> {
                                     updateItem(todo, !todo.completed);
                                   },
                                 ),
+                          onLongPress: () {
+                            _titleEditController.text = todo.title;
+                            _descEditController.text = todo.description;
+                            dialog(
+                              context: context,
+                              isEdit: true,
+                              title: 'Edit todo',
+                              titleController: _titleEditController,
+                              descController: _descEditController,
+                              cancelBtnFunc: () {},
+                              okBtnFunc: () {
+                                updateItem(
+                                    Todo(
+                                        id: todo.id,
+                                        title: _titleEditController.text,
+                                        description: _descEditController.text,
+                                        completed: todo.completed),
+                                    todo.completed);
+                              },
+                            );
+                          },
                         );
                       },
                     ),
@@ -185,53 +209,96 @@ class _TodoAppState extends State<TodoApp> {
           ? FloatingActionButton(
               tooltip: "Tambahkan Todo",
               onPressed: () {
-                showDialog(
+                dialog(
                   context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Tambah Todo'),
-                    content: SizedBox(
-                      width: 100,
-                      height: 100,
-                      child: Column(
-                        children: [
-                          TextField(
-                            controller: _titleController,
-                            decoration:
-                                const InputDecoration(hintText: 'Judul todo'),
-                          ),
-                          TextField(
-                            controller: _descController,
-                            decoration: const InputDecoration(
-                                hintText: 'Deskripsi todo'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        child: const Text('Batalkan'),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      TextButton(
-                        child: const Text('Tambah'),
-                        onPressed: () {
-                          addItem(_titleController.text, _descController.text);
-
-                          Navigator.pop(context);
-                          setState(() {
-                            _count = _count + 1;
-                          });
-                          _titleController.text = '';
-                          _descController.text = '';
-                        },
-                      ),
-                    ],
-                  ),
+                  title: 'Tambah todo',
+                  titleController: _titleController,
+                  descController: _descController,
+                  cancelBtnFunc: () {
+                    _titleController.text = '';
+                    _descController.text = '';
+                  },
+                  okBtnFunc: () {
+                    addItem(_titleController.text, _descController.text);
+                    _titleController.text = '';
+                    _descController.text = '';
+                  },
                 );
               },
               child: const Icon(Icons.add),
             )
           : null,
+    );
+  }
+
+  Future<dynamic> dialog(
+      {required BuildContext context,
+      required String title,
+      required TextEditingController titleController,
+      required TextEditingController descController,
+      required Function cancelBtnFunc,
+      required Function okBtnFunc,
+      bool? isEdit = false}) {
+    return showDialog(
+      barrierDismissible: false,
+      context: context,
+      builder: (context) => StatefulBuilder(builder: (context, setState) {
+        return AlertDialog(
+          title: Text(title),
+          content: SizedBox(
+            width: 150,
+            height: 150,
+            child: Column(
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: InputDecoration(
+                    labelText: 'Judul todo',
+                    errorText: validate ? "Judul tidak boleh kosong" : null,
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      validate = false;
+                    });
+                  },
+                ),
+                TextField(
+                  controller: descController,
+                  decoration:
+                      const InputDecoration(labelText: 'Deskripsi todo'),
+                  minLines: 1,
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  validate = false;
+                });
+                cancelBtnFunc();
+                Navigator.pop(context);
+              },
+              child: const Text('Batal'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (titleController.text.isEmpty) {
+                  setState(() {
+                    validate = true;
+                  });
+                } else {
+                  okBtnFunc();
+                  Navigator.pop(context);
+                }
+              },
+              child: Text(isEdit! ? 'Edit' : 'Tambah'),
+            ),
+          ],
+        );
+      }),
     );
   }
 }
