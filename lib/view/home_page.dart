@@ -316,17 +316,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                       );
                     }
-
-                    // : const Center(
-                    //     child: Text(
-                    //       "Belum ada Todo",
-                    //       style: TextStyle(
-                    //           fontStyle: FontStyle.italic,
-                    //           color: Colors.grey,
-                    //           fontSize: 23,
-                    //           fontWeight: FontWeight.bold),
-                    //     ),
-                    //   ),
                   })),
         ],
       ),
